@@ -9,11 +9,11 @@ const CONFIG = {
 
   // Link Google Maps lokasi acara.
   // Cara ambil: buka Google Maps > cari lokasi > tombol "Bagikan" > "Salin link".
-  MAPS_URL: "PASTE_GOOGLE_MAPS_LINK_DI_SINI",
+  MAPS_URL: "https://maps.app.goo.gl/c8xppnELAFZfppxJ9",
 
   // URL Web App dari Google Apps Script (lihat backend/apps-script.gs & backend/README.md
   // untuk cara membuat & deploy-nya). Setelah deploy, tempel URL-nya di sini.
-  GOOGLE_SCRIPT_URL: "PASTE_URL_GOOGLE_APPS_SCRIPT_DI_SINI",
+  GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxoAxW-fM__ZCW7DhJmII71l3DwhXZpke3_ZS-Z3FtWCaVXcoP2imtsN1YzGLOa4hJ0/exec",
 };
 
 /* ============ NAMA TAMU DARI URL ?to= ============ */
@@ -48,6 +48,9 @@ document.getElementById("openInvitation").addEventListener("click", () => {
   const main = document.getElementById("mainContent");
   main.classList.add("show");
   document.body.style.overflowY = "auto";
+
+  // tombol musik hanya muncul setelah undangan dibuka
+  musicBtn.classList.add("show");
 
   audio.play().then(() => setMusicIcon(true)).catch(() => setMusicIcon(false));
 
@@ -99,6 +102,42 @@ function startCountdown(){
   tick();
   setInterval(tick, 1000);
 }
+
+/* ============ SAVE THE DATE -> KALENDER HP ============
+   Membuat file .ics agar saat tombol ditekan, HP tamu membuka
+   aplikasi kalender dan menawarkan untuk menyimpan acara ini.
+============================================================= */
+(function setupSaveTheDate(){
+  const btn = document.getElementById("saveDateBtn");
+  if (!btn) return;
+
+  function toIcsDate(dateStr){
+    // format: YYYYMMDDTHHMMSSZ (UTC)
+    const d = new Date(dateStr);
+    return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  }
+
+  const start = toIcsDate(CONFIG.WEDDING_DATETIME);
+  const endDate = new Date(new Date(CONFIG.WEDDING_DATETIME).getTime() + 3 * 60 * 60 * 1000); // +3 jam
+  const end = endDate.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+  const icsContent = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Wedding Invitation//ID",
+    "BEGIN:VEVENT",
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    "SUMMARY:Pernikahan Nama Pria & Nama Wanita",
+    "DESCRIPTION:Akad Nikah & Resepsi Pernikahan",
+    "LOCATION:Sukabumi, Jawa Barat",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+  btn.href = URL.createObjectURL(blob);
+})();
 
 /* ============ COPY REKENING ============ */
 document.getElementById("btnCopy").addEventListener("click", (e) => {

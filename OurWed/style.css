@@ -58,17 +58,43 @@ button{ font-family: inherit; cursor:pointer; }
   overflow:hidden;
   -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
           mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  transform: scaleY(0);
+  transform-origin: top;
+  animation: photoReveal 1.3s cubic-bezier(.22,.7,.2,1) .15s forwards;
 }
 .cover-photo{
   width:100%; height:100%;
   object-fit: cover;
-  object-position: center top;
+  object-position: center 47%;
+  transform: scale(1.12);
+  animation: photoSettle 1.6s ease .2s forwards;
+}
+@keyframes photoReveal{
+  0%{ transform: scaleY(0); }
+  100%{ transform: scaleY(1); }
+}
+@keyframes photoSettle{
+  0%{ transform: scale(1.12); }
+  100%{ transform: scale(1); }
 }
 .cover-content{
   position:relative;
   z-index:2;
   padding: 2rem 1.5rem 3rem;
   max-width: 480px;
+}
+/* setiap elemen di cover muncul satu-satu dari bawah */
+.cv-in{
+  opacity:0;
+  transform: translateY(28px);
+  animation: coverRise .9s cubic-bezier(.2,.7,.2,1) forwards;
+  animation-delay: calc(.55s + (var(--d) * .18s));
+}
+@keyframes coverRise{
+  to{ opacity:1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce){
+  .cover-photo-wrap, .cover-photo, .cv-in{ animation: none; opacity:1; transform:none; }
 }
 .eyebrow-script{
   font-family: var(--font-script);
@@ -134,6 +160,15 @@ button{ font-family: inherit; cursor:pointer; }
 .vine{ stroke: var(--gold); stroke-width:2; fill:none; opacity:.7; }
 .leaf ellipse{ fill:#8a9a55; opacity:.8; }
 
+/* bunga siluet (hanya bayangan, dua pojok tambahan) */
+.corner-tr{ top:-10px; right:-10px; transform-origin: top right; }
+.corner-bl{ bottom:-10px; left:-10px; transform-origin: bottom left; }
+.silhouette{ animation-delay: .7s; }
+.petal-sil{ fill: rgba(255,255,255,.16); }
+.vine-sil{ stroke: rgba(255,255,255,.16); stroke-width:2; fill:none; }
+.page-ivory .petal-sil, .page-blush .petal-sil{ fill: rgba(122,31,43,.08); }
+.page-ivory .vine-sil, .page-blush .vine-sil{ stroke: rgba(122,31,43,.08); }
+
 /* ================= MUSIC BUTTON ================= */
 .music-btn{
   position: fixed;
@@ -145,9 +180,13 @@ button{ font-family: inherit; cursor:pointer; }
   border: 1px solid rgba(255,255,255,.5);
   background: rgba(0,0,0,.25);
   color:#fff;
-  display:flex; align-items:center; justify-content:center;
+  display:none;
+  align-items:center; justify-content:center;
   backdrop-filter: blur(4px);
+  opacity:0;
+  transition: opacity .4s ease;
 }
+.music-btn.show{ display:flex; opacity:1; }
 
 /* ================= MAIN / PAGES ================= */
 .main-content{ display:none; }
@@ -169,16 +208,34 @@ button{ font-family: inherit; cursor:pointer; }
 .page-blush{ background: var(--blush); }
 .page-maroon{ background: linear-gradient(160deg,var(--maroon) 0%, var(--maroon-d) 100%); color:#fff; }
 
-/* soft, non-rigid section separation */
-.page + .page{ box-shadow: 0 -1px 0 rgba(0,0,0,.03) inset; }
+/* pembatas antar page dibuat tidak kaku: tepi atas bergelombang */
+.wavy-top{
+  clip-path: url(#waveTop);
+  margin-top: -1px; /* hindari celah tipis antar section */
+  padding-top: 5.5rem;
+}
 
-/* reveal-on-scroll */
+/* reveal-on-scroll — elegan: fade + naik sedikit, foto disertai scale halus */
 .reveal{
   opacity:0;
-  transform: translateY(18px);
-  transition: opacity .9s ease, transform .9s ease;
+  transform: translateY(22px);
+  transition: opacity 1s cubic-bezier(.2,.65,.2,1), transform 1s cubic-bezier(.2,.65,.2,1);
 }
 .reveal.in-view{ opacity:1; transform: translateY(0); }
+
+.circle-photo-wrap.reveal, .framed-photo.reveal, .gallery-grid.reveal{
+  transform: translateY(22px) scale(.94);
+}
+.circle-photo-wrap.reveal.in-view, .framed-photo.reveal.in-view, .gallery-grid.reveal.in-view{
+  transform: translateY(0) scale(1);
+}
+
+/* stagger halus untuk item timeline */
+.timeline-item:nth-of-type(1){ transition-delay: 0s; }
+.timeline-item:nth-of-type(2){ transition-delay: .1s; }
+.timeline-item:nth-of-type(3){ transition-delay: .2s; }
+.timeline-item:nth-of-type(4){ transition-delay: .3s; }
+.gallery-grid img{ transition: transform .6s cubic-bezier(.2,.7,.3,1); }
 
 /* ---- hero page ---- */
 .hero-page{ gap:.4rem; }
@@ -216,41 +273,128 @@ button{ font-family: inherit; cursor:pointer; }
 
 .wedding-date{ font-family: var(--font-display); font-size:1.05rem; margin: .2rem 0 1rem; }
 .save-date-badge{
+  display:inline-block;
   border: 1px solid var(--maroon);
   color: var(--maroon);
-  padding: .5rem 1.4rem;
+  text-decoration:none;
+  padding: .55rem 1.5rem;
   border-radius:999px;
   font-size:.85rem;
   letter-spacing:.08em;
+  transition: background .3s ease, color .3s ease;
+}
+.save-date-badge:hover, .save-date-badge:active{ background: var(--maroon); color:#fff; }
+
+/* ================= FX LAYER (burung + kristal, tetap saat scroll) ================= */
+.fx-layer{
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+.birds-fixed{ position:absolute; inset:0; width:100%; height:100%; }
+.bird{
+  stroke: var(--maroon);
+  stroke-width: .35;
+  fill:none;
+  stroke-linecap:round;
+  opacity:.5;
+  vector-effect: non-scaling-stroke;
+}
+.fb1{ animation: flyAcross 16s linear infinite; transform: translate(-15%, 12%); }
+.fb2{ animation: flyAcross 13s linear infinite 3s; transform: translate(-15%, 28%); }
+.fb3{ animation: flyAcross 19s linear infinite 6s; transform: translate(-15%, 45%); }
+.fb4{ animation: flyAcross 15s linear infinite 9s; transform: translate(-15%, 65%); }
+.fb5{ animation: flyAcross 21s linear infinite 1.5s; transform: translate(-15%, 80%); }
+@keyframes flyAcross{
+  0%{ transform: translate(-15%, var(--y,20%)) scale(.9); }
+  100%{ transform: translate(115%, calc(var(--y,20%) - 8%)) scale(1.1); }
 }
 
-/* birds */
-.birds{ position:absolute; top:8%; left:0; width:100%; height:80px; pointer-events:none; opacity:.55; }
-.bird{ stroke: var(--maroon); stroke-width:2; fill:none; stroke-linecap:round; }
-.page-maroon .bird{ stroke: var(--gold); }
-.bird-a{ animation: flyAcross 9s linear 1 both; transform: translate(-40px, 10px) scale(1.2); }
-.bird-b{ animation: flyAcross 9s linear 1 .6s both; transform: translate(-40px, 30px) scale(.9); }
-.bird-c{ animation: flyAcross 9s linear 1 1.2s both; transform: translate(-40px, 50px) scale(1); }
-@keyframes flyAcross{
-  0%{ transform: translate(-40px, 10px) scale(1); }
-  100%{ transform: translate(860px, -10px) scale(1); }
+/* kristal berjatuhan, konsep sama seperti burung: halus & terus-menerus */
+.crystals{ position:absolute; inset:0; }
+.crystals span{
+  position:absolute;
+  top:-5%;
+  width:7px; height:7px;
+  background: linear-gradient(135deg, var(--gold), #fff2d9);
+  transform: rotate(45deg);
+  opacity:.6;
+  animation: fallDown linear infinite;
+  box-shadow: 0 0 4px rgba(201,166,107,.6);
+}
+.crystals span:nth-child(1){ left:8%;  width:5px;height:5px; animation-duration:14s; animation-delay:0s; }
+.crystals span:nth-child(2){ left:20%; width:6px;height:6px; animation-duration:18s; animation-delay:2s; }
+.crystals span:nth-child(3){ left:33%; width:4px;height:4px; animation-duration:12s; animation-delay:5s; }
+.crystals span:nth-child(4){ left:47%; width:7px;height:7px; animation-duration:20s; animation-delay:1s; }
+.crystals span:nth-child(5){ left:58%; width:5px;height:5px; animation-duration:15s; animation-delay:7s; }
+.crystals span:nth-child(6){ left:68%; width:6px;height:6px; animation-duration:17s; animation-delay:3s; }
+.crystals span:nth-child(7){ left:77%; width:4px;height:4px; animation-duration:13s; animation-delay:6s; }
+.crystals span:nth-child(8){ left:86%; width:6px;height:6px; animation-duration:19s; animation-delay:4s; }
+.crystals span:nth-child(9){ left:93%; width:5px;height:5px; animation-duration:16s; animation-delay:8s; }
+.crystals span:nth-child(10){ left:15%; width:4px;height:4px; animation-duration:11s; animation-delay:9s; }
+@keyframes fallDown{
+  0%{ transform: translateY(0) rotate(45deg); opacity:0; }
+  10%{ opacity:.65; }
+  90%{ opacity:.5; }
+  100%{ transform: translateY(105vh) rotate(200deg); opacity:0; }
 }
 @media (prefers-reduced-motion: reduce){
-  .bird-a,.bird-b,.bird-c,.corner-flower{ animation: none; opacity:1; transform:none; }
+  .bird, .crystals span, .corner-flower{ animation: none; opacity:.4; transform:none; }
 }
 
+/* foto sedikit membesar saat disentuh/ditekan (mobile & desktop) */
+.zoomable{ transition: transform .35s cubic-bezier(.2,.7,.3,1); }
+.zoomable:active{ transform: scale(1.06); }
+
 /* ---- salam / couple (page 2) ---- */
-.salam{ font-family: var(--font-display); font-size:1.3rem; color: var(--maroon); margin-bottom:1rem; }
+.page2-silhouette{
+  position:absolute;
+  top:50%; left:50%;
+  width: 320px; height:320px;
+  transform: translate(-50%,-50%);
+  z-index:0;
+  pointer-events:none;
+}
+.sil-ring{ fill:none; stroke: rgba(122,31,43,.08); stroke-width:1.4; }
+.sil-ring.thin{ stroke: rgba(201,166,107,.18); stroke-width:1; }
+
+.salam{ font-family: var(--font-display); font-size:1.3rem; color: var(--maroon); margin-bottom:1rem; position:relative; z-index:1; }
 .salam.light{ color:#fff; }
-.intro-text{ max-width: 380px; line-height:1.8; color: var(--ink-soft); margin-bottom:2rem; }
+.intro-text{ max-width: 380px; line-height:1.8; color: var(--ink-soft); margin-bottom:0; position:relative; z-index:1; }
 .page-blush .intro-text{ color:#5c4a3f; }
 
-.couple-block{ display:flex; align-items:center; gap:1.4rem; }
-.couple-side{ max-width:150px; }
-.couple-name{ font-family: var(--font-display); font-style: italic; color: var(--maroon); font-size:1.25rem; margin:0 0 .3rem; }
+/* garis penghubung dari titik dua menuju kartu nama */
+.connector-line{
+  width:1px;
+  height: 34px;
+  margin: 0 auto;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  position: relative;
+  z-index:1;
+}
+
+/* kartu elegan agar tidak menyatu dengan background */
+.couple-panel{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:.9rem;
+  background: rgba(255,255,255,.55);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  padding: 1.8rem 2.2rem;
+  box-shadow: 0 12px 30px -14px rgba(90,20,29,.25);
+  backdrop-filter: blur(2px);
+}
+.couple-side{ text-align:center; }
+.couple-name{ font-family: var(--font-display); font-style: italic; color: var(--maroon); font-size:1.3rem; margin:0 0 .3rem; }
 .couple-order{ font-size:.8rem; color: var(--ink-soft); margin:0; }
 .couple-parents{ font-size:.9rem; margin:.15rem 0 0; }
-.ampersand{ font-family:var(--font-script); font-size:2rem; color: var(--gold); }
+.ampersand{ font-family:var(--font-script); font-size:1.8rem; color: var(--gold); line-height:1; }
 
 /* ---- ayat & journey (page 3) ---- */
 .center-flower{ width:70px; height:70px; margin-bottom:1rem; }
@@ -287,7 +431,15 @@ button{ font-family: inherit; cursor:pointer; }
 .timeline-item p{ margin:0; font-size:.85rem; line-height:1.6; color: var(--ink-soft); }
 
 /* ---- akad & resepsi (page 4) ---- */
-.event-card{ margin-bottom:1rem; }
+.event-card{
+  margin-bottom:1rem;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(201,166,107,.55);
+  border-radius: 4px;
+  padding: 1.3rem 1.8rem;
+  min-width: 240px;
+  backdrop-filter: blur(3px);
+}
 .event-date{ font-family:var(--font-display); font-size:1.1rem; margin:.2rem 0; }
 .event-time{ margin:.2rem 0; opacity:.9; }
 .event-place{ margin:.6rem 0 0; font-weight:500; }
